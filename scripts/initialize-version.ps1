@@ -14,7 +14,7 @@ try {
     }
     $version = (Get-Content -LiteralPath VERSION -Raw).Trim()
     $trackedPaths = @(
-        '.gitattributes', '.gitignore', '.github', 'README.md', 'CHANGELOG.md',
+        '.gitattributes', '.gitignore', '.github', 'LICENSE', 'README.md', 'CHANGELOG.md',
         'VERSION', 'app.go', 'main.go', 'go.mod', 'go.sum', 'wails.json',
         'frontend', 'internal', 'scripts', 'docs',
         'build/appicon.png', 'build/appicon.svg', 'build/windows'

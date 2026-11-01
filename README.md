@@ -49,7 +49,7 @@ Windows 需要将 Go 的 bin 目录加入 PATH。Linux 需先安装开发库，�
 
 本项目不需要 `npm install`，也不需要启动前端开发服务器。完整平台安装步骤见[开发与发布文档](docs/DEVELOPMENT.md)。GitHub Actions 已配置三个系统的构建、压缩与 SHA-256 校验文件；推送 `v*` 标签后创建草稿 Release。
 
-目标远程仓库为 `git@github.com:zhouyulong/toolbox.git`。源码目录已初始化 Git；当前环境限制 `.git` 写入且自动审批器不可用，尚未生成初始提交和标签，也未推送。在本机 PowerShell 执行 `.\scripts\publish-first-version.ps1` 可保存初版并推送 `main` 与 `v0.1.0`；仅需本地保存时执行 `.\scripts\initialize-version.ps1`。详情见开发文档。
+源码仓库：[zhouyulong/toolbox](https://github.com/zhouyulong/toolbox)，默认分支为 `main`，首版为 `v0.1.0`。日常提交、版本标签和发布流程见开发文档。
 
 ## 数据存放
 
@@ -78,3 +78,7 @@ Windows 需要将 Go 的 bin 目录加入 PATH。Linux 需先安装开发库，�
 ## 当前交付范围
 
 代码提供跨平台构建流程；Windows 本机构建结果见交付说明。Linux、macOS 的实际运行与真实供应商连通性需在相应环境中确认。仓库不包含密钥、真实会话或自动化测试；不宣称未经执行的测试已通过。
+
+## 许可证
+
+采用 [MIT License](LICENSE)，保留远程仓库已有的许可证及版权声明。

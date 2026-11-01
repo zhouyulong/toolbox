@@ -71,7 +71,7 @@ jobs:
           $version = (Get-Content VERSION -Raw).Trim()
           $name = "ToolboxSelf-v$version-windows-amd64.zip"
           New-Item -ItemType Directory -Path release -Force | Out-Null
-          Compress-Archive -Path build/bin/ToolboxSelf.exe,README.md,CHANGELOG.md,docs -DestinationPath "release/$name"
+          Compress-Archive -Path build/bin/ToolboxSelf.exe,LICENSE,README.md,CHANGELOG.md,docs -DestinationPath "release/$name"
           $hash = (Get-FileHash "release/$name" -Algorithm SHA256).Hash.ToLower()
           "$hash  $name" | Set-Content -Encoding ascii "release/$name.sha256"
       - name: Package Linux or macOS
@@ -82,7 +82,7 @@ jobs:
         run: |
           version=$(tr -d '\r\n' < VERSION)
           mkdir -p release/stage
-          cp -R README.md CHANGELOG.md docs release/stage/
+          cp -R LICENSE README.md CHANGELOG.md docs release/stage/
           if [ "$RUNNER_OS" = macOS ]; then
             cp -R build/bin/ToolboxSelf.app release/stage/
           else

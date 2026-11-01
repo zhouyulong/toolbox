@@ -97,13 +97,7 @@ gofmt -w main.go app.go internal/toolbox
 
 ## 4. Git 管理
 
-仓库采用 Git，构建产物、缓存、密钥和运行数据不入库。当前交付环境已初始化仓库，但 `.git` 写入受到只读限制，自动审批系统又无法完成审批，因此尚未创建初始提交或标签。请在本机终端先执行：
-
-```powershell
-.\scripts\initialize-version.ps1
-```
-
-该脚本只用于尚无提交的仓库，暂存明确列出的源码和文档，创建初始提交与当前 `VERSION` 对应的标签，不推送远程。以后按正常流程维护：
+仓库采用 Git，构建产物、缓存、密钥和运行数据不入库。默认分支为 `main`，`origin` 指向 `git@github.com:zhouyulong/toolbox.git`。首版保存了完整源码与文档，并合并保留远程已有的 MIT LICENSE 初始提交。后续按正常流程维护：
 
 ```sh
 git status
@@ -116,15 +110,14 @@ git commit -m "feat: describe the change"
 
 推荐提交前缀：`feat:`、`fix:`、`docs:`、`refactor:`、`build:`、`chore:`。避免把工作区数据放在源码目录；若必须这样做，应先给其具体路径加 `.gitignore`。
 
-用户首次提供的是空目录，因此初版创建本地 `main` 分支。未配置远程仓库；配置自己的远程后再推送：
+查看远程与推送普通提交：
 
 ```sh
-git remote add origin git@github.com:zhouyulong/toolbox.git
+git remote -v
 git push -u origin main
-git push origin v0.1.0
 ```
 
-用户已指定上述 GitHub 仓库。当前自动审批器因 `unknown provider for model codex-auto-review` 无法运行，代理尚未完成远程读取、配置或推送。可在本机 PowerShell 用下面一条命令完成首次本地保存与推送：
+`initialize-version.ps1` 仅用于没有提交的全新仓库；已有仓库不再运行初始版本脚本。`publish-first-version.ps1` 是首次发布辅助脚本：
 
 ```powershell
 .\scripts\publish-first-version.ps1

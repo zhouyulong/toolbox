@@ -6,8 +6,8 @@
 
 - 在 Windows amd64 主机使用 Go 1.22.5、Wails CLI v2.10.2 完成 production 构建。
 - 产物为 `build/bin/ToolboxSelf.exe`，含图标、Windows 版本资源和 DPI 清单，约 9 MiB。
-- 本地分发包为 `release/ToolboxSelf-v0.1.0-windows-amd64.zip`，包含 exe、README、Changelog 和详细文档；同目录提供 SHA-256 校验文件。
-- 已初始化 Git 仓库，默认分支名为 `main`，但初始提交与 `v0.1.0` 标签尚未创建：当前执行环境对 `.git` 只读，提权自动审批又因 `unknown provider for model codex-auto-review` 无法完成。用户已指定远程仓库 `git@github.com:zhouyulong/toolbox.git`，但尚未完成配置或推送。可在本机终端运行 `./scripts/publish-first-version.ps1` 完成本地保存和推送；只保存本地时使用 `./scripts/initialize-version.ps1`。
+- 本地分发包为 `release/ToolboxSelf-v0.1.0-windows-amd64.zip`，包含 exe、LICENSE、README、Changelog 和详细文档；同目录提供 SHA-256 校验文件。
+- 已保存首版 Git 源码，默认分支为 `main`，首版标签为 `v0.1.0`；远程地址为 `git@github.com:zhouyulong/toolbox.git`。保留了远程已有的 MIT LICENSE 及初始提交历史。远程发布状态以仓库分支、标签和 Actions 结果为准。
 - 已提供 Windows、Ubuntu 24.04 x64、macOS universal 的 GitHub Actions 构建及草稿发布配置。
 
 ## 尚未执行的验证
