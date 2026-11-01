@@ -1,0 +1,17 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "ToolboxSelf",
+  "outputfilename": "ToolboxSelf",
+  "frontend:dir": "frontend",
+  "frontend:install": "",
+  "frontend:build": "",
+  "frontend:dev:watcher": "",
+  "author": { "name": "ToolboxSelf contributors" },
+  "info": {
+    "companyName": "ToolboxSelf",
+    "productName": "ToolboxSelf",
+    "productVersion": "0.1.0",
+    "copyright": "Copyright © 2026 ToolboxSelf contributors",
+    "comments": "Personal LLM toolbox"
+  }
+}

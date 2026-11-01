@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' ws:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="color-scheme" content="light dark">
+  <title>ToolboxSelf</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-icon">▦</span><div>ToolboxSelf<span class="brand-sub">个人 LLM 工具箱</span></div></div>
+      <div class="sidebar-actions"><button id="new-tool" class="primary">＋ 创建工具</button><button id="import-tool" class="icon-button" title="导入已有工作区" aria-label="导入已有工作区">↥</button></div>
+      <div class="section-heading"><span>我的工具</span><span id="tool-count" class="count">0</span></div>
+      <nav id="tools" aria-label="工具列表"></nav>
+      <div class="session-heading section-heading"><span>当前工具的会话</span><button id="new-chat" class="text-button" title="新建会话">＋ 新建</button></div>
+      <nav id="sessions" aria-label="会话列表"></nav>
+      <div class="sidebar-footer"><button id="providers-button" class="footer-button">⚙ <span>模型供应商</span><span id="provider-count" class="count">0</span></button><button id="help-button" class="footer-button">? <span>使用指南</span><span id="version"></span></button></div>
+    </aside>
+    <main id="main" aria-label="问答工作区"></main>
+  </div>
+  <div id="modal-root"></div>
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>
