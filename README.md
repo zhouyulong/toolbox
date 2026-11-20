@@ -10,9 +10,13 @@
 - 多供应商、多模型：OpenAI Chat Completions 兼容、Anthropic Messages、Gemini 原生接口。
 - 支持 Ollama、LM Studio 等提供 OpenAI 兼容接口的本地服务。
 - 每个工具独立保存名称、system、模型参数与会话；可自行选择不同磁盘上的数据目录。
+- 模型完整下拉选择与自定义 ID；每工具可选低／中／高思考强度，默认不发送。
+- 共享文本技能库：创建、导入、编辑 Skill，在工具设置中分别授权，后续请求仅加载获授权正文。
 - 文本流式问答、停止生成、多轮上下文、会话重命名和删除、复制、Markdown 导出。
 - 工作区导入与移除登记；移除工具不会删除目录。
 - 跟随系统明暗主题；本地 JSON 数据；原子替换写入；单实例保护。
+
+**本版本仅支持纯文本 Skill，不支持非纯文本 Skill。** Skill 只作为模型任务说明，不执行脚本、不读写本地任务文件、不联网检索、不调用外部工具，也不进行 harness 任务编排。
 
 只做原生文本 LLM 问答，不含 agent、函数调用、检索、附件或第三方插件执行。API Key 存于本机配置文件中，当前未加密。
 
@@ -55,6 +59,8 @@ Windows 需要将 Go 的 bin 目录加入 PATH。Linux 需先安装开发库，�
 
 全局配置：Windows `%APPDATA%\ToolboxSelf\config.json`；macOS `~/Library/Application Support/ToolboxSelf/config.json`；Linux `$XDG_CONFIG_HOME/ToolboxSelf/config.json`（通常为 `~/.config/ToolboxSelf/config.json`）。
 
+技能库统一保存在上述配置目录的 `skills/<skill-id>/` 下，包含 `SKILL.md` 正文与 `skill.json` 名称元数据。工具只保存授权 ID，不复制正文。备份、换机时需连同技能库一起复制；安装 Skill 不会自动授予任何工具。
+
 每个工具选择自己的目录：
 
 ```text
@@ -77,7 +83,7 @@ Windows 需要将 Go 的 bin 目录加入 PATH。Linux 需先安装开发库，�
 
 ## 当前交付范围
 
-代码提供跨平台构建流程；Windows 本机构建结果见交付说明。Linux、macOS 的实际运行与真实供应商连通性需在相应环境中确认。仓库不包含密钥、真实会话或自动化测试；不宣称未经执行的测试已通过。
+代码提供跨平台构建流程；Windows 本机构建结果见交付说明。Linux、macOS 的实际运行与真实供应商连通性需在相应环境中确认。仓库不包含密钥或真实会话。已增加 Go 回归测试与独立的浏览器界面测试；模拟接口与浏览器测试不代替真实供应商联调或各平台原生窗口验收。
 
 ## 许可证
 

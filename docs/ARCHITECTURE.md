@@ -62,6 +62,9 @@ flowchart LR
   "tokenParameter": "max_tokens",
   "maxTokens": 4096,
   "historyTurns": 10,
+  "sendReasoningEffort": false,
+  "reasoningEffort": "medium",
+  "skillIds": [],
   "createdAt": "RFC3339 UTC时间",
   "updatedAt": "RFC3339 UTC时间"
 }
@@ -137,3 +140,13 @@ JSON 先写到同一目录中的临时文件，执行 `Sync`、关闭后通过�
 5. Changelog 说明兼容性及回退方式。
 
 不要把配置格式版本与应用版本绑定，也不要在未知格式下猜测字段含义。
+
+## 9. 文本技能库与请求增强
+
+技能库单独存放于全局配置目录的 `skills/<32位ID>/`：`skill.json` 保存 ID、名称，`SKILL.md` 保存 UTF-8 正文。安装使用临时目录完成后登记，正文与元数据各自通过原子替换写入。编辑时两文件不是跨文件事务；写入失败会返回错误，正文可能已经更新。工具仅保存有序 `skillIds`；新建和保存授权时验证引用存在，不改变全局供应商结构和 schemaVersion。
+
+发送前，在保存用户消息之前，根据当前工具的授权列表加载正文，与原 System 合成局部请求快照；不覆盖工作区原 System，不增加历史消息。仅加载获授权内容，缺失、无效或重复引用会报错。正文上限 256 KiB，合成上限 1 MiB。库与技能目录、正文和元数据不接受符号链接；只支持普通 UTF-8 文本文件。不是针对其他进程并发篡改文件系统的安全沙箱。
+
+Skill 不携带执行权限，不存在自动路由、脚本执行、附属资源读取或多阶段调用。界面持续展示“本版本仅支持纯文本 Skill，不支持非纯文本 Skill”。撤销只影响后续加载，无法删除已保留在历史中的相关内容。库中 Skill 被已登记工具引用时不能删除；被活动请求引用时不能编辑。
+
+可选 `sendReasoningEffort`、`reasoningEffort` 与 `skillIds` 缺失时保持旧行为。请求根据协议映射思考参数：OpenAI 的 `reasoning_effort`；Anthropic 的 adaptive thinking 和 `output_config.effort`；Gemini 2.5 的预算或其他等级接口的 `thinkingLevel`。不维护模型能力注册表；不兼容的模型或档位由本地组合检查或供应商错误明确报告，不自动降级或重试。具体映射可在模型升级时单独维护。

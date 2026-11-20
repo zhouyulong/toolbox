@@ -53,6 +53,11 @@ func (s *Service) State() State {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	state := State{Version: s.version, ConfigDir: s.configDir, DefaultWorkspaceDir: s.workspaceDir, Providers: []ProviderView{}, Tools: []ToolSummary{}}
+	var skillErr error
+	state.Skills, skillErr = s.listSkills()
+	if skillErr != nil {
+		state.SkillError = "技能库无法读取：" + skillErr.Error()
+	}
 	for _, p := range s.config.Providers {
 		state.Providers = append(state.Providers, ProviderView{ID: p.ID, Name: p.Name, Kind: p.Kind, BaseURL: p.BaseURL, HasAPIKey: p.APIKey != "", Models: p.Models, TimeoutSeconds: p.TimeoutSeconds})
 	}
@@ -165,6 +170,9 @@ func (s *Service) tool(id string) (Tool, error) {
 }
 
 func validateTool(t Tool) error {
+	if err := validateReasoning(t); err != nil {
+		return err
+	}
 	if strings.TrimSpace(t.Name) == "" || utf8.RuneCountInString(t.Name) > 80 {
 		return errors.New("工具名称应为 1–80 个字符")
 	}
@@ -221,6 +229,9 @@ func (s *Service) CreateTool(t Tool) (Tool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := validateTool(t); err != nil {
+		return Tool{}, err
+	}
+	if err := s.validateSkillIDs(t.SkillIDs); err != nil {
 		return Tool{}, err
 	}
 	id, err := newID()
@@ -307,6 +318,9 @@ func (s *Service) SaveTool(input Tool) (Tool, error) {
 	if err := validateTool(input); err != nil {
 		return t, err
 	}
+	if err := s.validateSkillIDs(input.SkillIDs); err != nil {
+		return t, err
+	}
 	t.Name = strings.TrimSpace(input.Name)
 	t.Description = input.Description
 	t.System = input.System
@@ -318,6 +332,9 @@ func (s *Service) SaveTool(input Tool) (Tool, error) {
 	t.UpdatedAt = now()
 	t.SendTemperature = input.SendTemperature
 	t.TokenParameter = input.TokenParameter
+	t.SendReasoningEffort = input.SendReasoningEffort
+	t.ReasoningEffort = input.ReasoningEffort
+	t.SkillIDs = append([]string{}, input.SkillIDs...)
 	return t, saveTool(t)
 }
 
@@ -471,6 +488,16 @@ func (s *Service) Send(ctx context.Context, toolID, sessionID, content, requestI
 		s.mu.Unlock()
 		return ChatResult{}, errors.New("请在工具设置中选择供应商并填写模型 ID")
 	}
+	if err := applyReasoning(p, t, map[string]interface{}{}); err != nil {
+		s.mu.Unlock()
+		return ChatResult{}, err
+	}
+	instructions, err := s.instructions(t)
+	if err != nil {
+		s.mu.Unlock()
+		return ChatResult{}, err
+	}
+	t.System = instructions
 	chat, err := readSession(t, sessionID)
 	if err != nil {
 		s.mu.Unlock()

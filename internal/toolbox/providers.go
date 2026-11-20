@@ -95,6 +95,9 @@ func streamCompletion(ctx context.Context, p Provider, t Tool, messages []Messag
 	default:
 		return errors.New("不支持的供应商协议")
 	}
+	if err := applyReasoning(p, t, body); err != nil {
+		return err
+	}
 	data, err := json.Marshal(body)
 	if err != nil {
 		return err

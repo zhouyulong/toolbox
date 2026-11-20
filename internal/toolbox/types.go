@@ -42,20 +42,23 @@ type Config struct {
 }
 
 type Tool struct {
-	SchemaVersion   int     `json:"schemaVersion"`
-	ID              string  `json:"id"`
-	Name            string  `json:"name"`
-	Description     string  `json:"description"`
-	System          string  `json:"system"`
-	ProviderID      string  `json:"providerId"`
-	Model           string  `json:"model"`
-	Temperature     float64 `json:"temperature"`
-	SendTemperature bool    `json:"sendTemperature"`
-	TokenParameter  string  `json:"tokenParameter"`
-	MaxTokens       int     `json:"maxTokens"`
-	HistoryTurns    int     `json:"historyTurns"`
-	CreatedAt       string  `json:"createdAt"`
-	UpdatedAt       string  `json:"updatedAt"`
+	SchemaVersion       int      `json:"schemaVersion"`
+	ID                  string   `json:"id"`
+	Name                string   `json:"name"`
+	Description         string   `json:"description"`
+	System              string   `json:"system"`
+	ProviderID          string   `json:"providerId"`
+	Model               string   `json:"model"`
+	Temperature         float64  `json:"temperature"`
+	SendTemperature     bool     `json:"sendTemperature"`
+	TokenParameter      string   `json:"tokenParameter"`
+	MaxTokens           int      `json:"maxTokens"`
+	HistoryTurns        int      `json:"historyTurns"`
+	SendReasoningEffort bool     `json:"sendReasoningEffort,omitempty"`
+	ReasoningEffort     string   `json:"reasoningEffort,omitempty"`
+	SkillIDs            []string `json:"skillIds,omitempty"`
+	CreatedAt           string   `json:"createdAt"`
+	UpdatedAt           string   `json:"updatedAt"`
 	// Path belongs to the local registry; the workspace file is portable.
 	Path string `json:"path,omitempty"`
 }
@@ -97,6 +100,8 @@ type State struct {
 	DefaultWorkspaceDir string         `json:"defaultWorkspaceDir"`
 	Providers           []ProviderView `json:"providers"`
 	Tools               []ToolSummary  `json:"tools"`
+	Skills              []SkillSummary `json:"skills"`
+	SkillError          string         `json:"skillError,omitempty"`
 }
 
 type Delta struct {

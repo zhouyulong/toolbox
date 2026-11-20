@@ -33,6 +33,7 @@ function renderSidebar() {
   $('#version').textContent = `v${state.data.version}`;
   $('#tool-count').textContent = state.data.tools.length;
   $('#provider-count').textContent = state.data.providers.length;
+  $('#skill-count').textContent = (state.data.skills || []).length;
   const tools = $('#tools'); tools.replaceChildren();
   if (!state.data.tools.length) tools.append(el('div', 'empty-small', '把常用提示词变成你的专属工具。'));
   for (const tool of state.data.tools) {
@@ -91,6 +92,8 @@ function renderMain() {
   const titles = el('div'); titles.append(el('h1', 'workspace-title', tool.name));
   const sub = el('div', 'workspace-subtitle');
   sub.append(el('span', 'pill', tool.model || '尚未选择模型'), el('span', '', providerName(tool.providerId)));
+  if (tool.sendReasoningEffort) sub.append(el('span', 'pill', `思考：${{low:'低',medium:'中',high:'高'}[tool.reasoningEffort] || tool.reasoningEffort}`));
+  if (tool.skillIds?.length) sub.append(el('span', '', `${tool.skillIds.length} 个文本 Skill`));
   titles.append(sub); header.append(titles);
   const actions = el('div', 'header-actions');
   actions.append(button('工具设置', '', () => openToolModal(tool)));
@@ -285,7 +288,7 @@ function field(label, type = 'text', value = '', hint = '') {
   const wrapper = el('label', 'form-field'); wrapper.append(el('span', '', label));
   const input = type === 'textarea' ? el('textarea') : type === 'select' ? el('select') : el('input');
   if (!['textarea', 'select'].includes(type)) input.type = type;
-  input.value = value; wrapper.append(input); if (hint) wrapper.append(el('p', 'hint', hint)); return { wrapper, input };
+  input.setAttribute('aria-label', label); input.value = value; wrapper.append(input); if (hint) wrapper.append(el('p', 'hint', hint)); return { wrapper, input };
 }
 function options(select, entries, selected) {
   select.replaceChildren(); for (const [value, label] of entries) { const option = el('option', '', label); option.value = value; select.append(option); }
@@ -299,22 +302,35 @@ function formAction(footer, label, action, errorNode) {
   }); footer.append(save); return save;
 }
 
+const skillWarning = '本版本仅支持纯文本 Skill，不支持非纯文本 Skill。仅将正文作为模型的任务说明，不执行脚本、不读写本地文件、不联网检索、不调用外部工具，也不进行任务编排。导入成功不代表其中要求的操作能够执行。';
+function skillNotice() { const node = el('div', 'notice skill-warning', skillWarning); node.setAttribute('role', 'note'); return node; }
+
 function openToolModal(tool = null) {
   const { body, footer } = modal(tool ? '工具设置' : '创建工具');
   const p = state.data.providers[0];
-  const defaults = { name: '', description: '', system: '', providerId: p?.id || '', model: p?.models[0] || '', path: '', temperature: 0.7, maxTokens: 4096, historyTurns: 10, sendTemperature: true, tokenParameter: 'max_tokens' };
+  const defaults = { name: '', description: '', system: '', providerId: p?.id || '', model: '', path: '', temperature: 0.7, maxTokens: 4096, historyTurns: 10, sendTemperature: true, tokenParameter: 'max_tokens', sendReasoningEffort: false, reasoningEffort: 'medium', skillIds: [] };
   const value = tool || defaults;
   const name = field('工具名称', 'text', value.name), description = field('简短说明', 'text', value.description);
   name.input.maxLength = 80; name.input.placeholder = '例如：论文润色、代码问答、英语教练'; description.input.placeholder = '帮助自己记住这个工具的用途';
   body.append(name.wrapper, description.wrapper);
   const system = field('System 提示词 · 由你定义工具的性质', 'textarea', value.system, '每次请求都携带这段提示词。OpenAI 兼容接口使用 system，其他协议映射为原生系统指令字段。');
   system.input.rows = 6; system.input.placeholder = '你是一名……\n你的任务是……\n输出要求：……'; body.append(system.wrapper);
-  const row = el('div', 'form-row'), provider = field('模型供应商', 'select'), model = field('模型 ID', 'text', value.model);
+  const row = el('div', 'form-row'), provider = field('模型供应商', 'select'), model = field('模型 ID', 'select');
+  const customModel = field('自定义模型 ID', 'text', value.model);
+  const customValue = '__custom_model__';
   options(provider.input, [['', '请选择'], ...state.data.providers.map(p => [p.id, p.name])], value.providerId);
-  const suggestions = el('datalist'); suggestions.id = 'model-suggestions'; model.input.setAttribute('list', suggestions.id);
-  const updateModels = change => { const models = state.data.providers.find(p => p.id === provider.input.value)?.models || []; suggestions.replaceChildren(...models.map(m => { const o = el('option'); o.value = m; return o; })); if (change) model.input.value = models[0] || ''; };
-  provider.input.addEventListener('change', () => updateModels(true)); updateModels(false);
-  row.append(provider.wrapper, model.wrapper); body.append(row, suggestions);
+  const updateCustomModel = () => { customModel.wrapper.hidden = model.input.value !== customValue; };
+  const updateModels = change => {
+    const models = state.data.providers.find(p => p.id === provider.input.value)?.models || [];
+    const selected = change ? '' : value.model && !models.includes(value.model) ? customValue : value.model || '';
+    options(model.input, [['', '请选择模型'], ...models.map(m => [m, m]), [customValue, '自定义模型 ID']], selected);
+    model.input.disabled = !provider.input.value;
+    if (change) customModel.input.value = '';
+    updateCustomModel();
+  };
+  provider.input.addEventListener('change', () => updateModels(true));
+  model.input.addEventListener('change', updateCustomModel); updateModels(false);
+  row.append(provider.wrapper, model.wrapper); body.append(row, customModel.wrapper);
   if (!state.data.providers.length) body.append(el('div', 'notice', '还没有供应商。可以先创建工具，再到左下角「模型供应商」配置。'));
   const path = field('独立工作区', 'text', value.path, tool ? '工作区路径不可直接修改。移动目录后，请移除登记并从新路径导入。' : `留空则自动建立独立目录：${state.data.defaultWorkspaceDir} / 随机 ID。自选目录必须为空。`);
   if (tool) path.input.readOnly = true;
@@ -328,11 +344,34 @@ function openToolModal(tool = null) {
   const sendTemp = checkbox('发送 temperature 参数（不支持该参数的模型请关闭）', value.sendTemperature); advanced.append(sendTemp.wrapper);
   const token = field('OpenAI 兼容接口的输出限制参数', 'select', '', '部分推理模型要求 max_completion_tokens；Anthropic 和 Gemini 会自动映射各自的字段。');
   options(token.input, [['max_tokens', 'max_tokens'], ['max_completion_tokens', 'max_completion_tokens']], value.tokenParameter); advanced.append(token.wrapper, el('p', 'hint', '历史轮数为 0 时仅发送本次提问；失败或停止的回复不会加入后续上下文。参数范围还需符合所选模型的要求。')); body.append(advanced);
+  const sendReasoning = checkbox('指定思考强度', !!value.sendReasoningEffort);
+  const effort = field('思考强度', 'select', '', '关闭表示使用模型默认行为，不保证关闭内部思考。模型必须支持所选档位，不兼容时会明确报错。Anthropic 使用自适应思考，需关闭 temperature。Gemini 2.5 低／中／高预算为 1024／4096／8192，最大输出需高于预算。');
+  options(effort.input, [['low', '低'], ['medium', '中'], ['high', '高']], value.reasoningEffort || 'medium');
+  const updateEffort = () => { effort.wrapper.hidden = !sendReasoning.input.checked; effort.input.disabled = !sendReasoning.input.checked; };
+  sendReasoning.input.addEventListener('change', updateEffort); updateEffort(); advanced.append(sendReasoning.wrapper, effort.wrapper);
+  const skillSection = el('section', 'skill-grants'); skillSection.append(el('h3', '', '可使用的 Skill'), skillNotice());
+  const grants = new Set(value.skillIds || []), skillChoices = [];
+  const skills = state.data.skills || [];
+  if (state.data.skillError) skillSection.append(el('div', 'notice error', state.data.skillError));
+  if (!skills.length) skillSection.append(el('p', 'hint', '技能库暂无 Skill。请先在左下角「技能库」中创建或导入。'));
+  for (const skill of skills) {
+    const item = checkbox(skill.name, grants.has(skill.id));
+    item.input.disabled = !!skill.loadError && !grants.has(skill.id);
+    skillChoices.push({ id: skill.id, input: item.input }); skillSection.append(item.wrapper);
+    if (skill.loadError) skillSection.append(el('p', 'form-error', skill.loadError));
+  }
+  for (const id of grants) {
+    if (skills.some(skill => skill.id === id)) continue;
+    const missing = checkbox(`缺失的 Skill：${id}（取消勾选可撤销授权）`, true);
+    skillChoices.push({id, input:missing.input}); skillSection.append(missing.wrapper);
+  }
+  skillSection.append(el('p', 'hint', '勾选并保存即授权，取消勾选即撤销。授权正文会随后续请求发给所选供应商；撤销不会清除历史会话。'));
+  body.append(skillSection);
   const error = el('div', 'form-error'); body.append(error);
   if (tool) footer.append(button('移除登记', 'danger left', () => forgetTool(tool)));
   footer.append(button('取消', '', closeModal));
   formAction(footer, tool ? '保存设置' : '创建工具', async () => {
-    const input = { ...value, name: name.input.value, description: description.input.value, system: system.input.value, providerId: provider.input.value, model: model.input.value.trim(), path: path.input.value.trim(), temperature: Number(temperature.input.value), maxTokens: Number(maxTokens.input.value), historyTurns: Number(historyTurns.input.value), sendTemperature: sendTemp.input.checked, tokenParameter: token.input.value };
+    const input = { ...value, name: name.input.value, description: description.input.value, system: system.input.value, providerId: provider.input.value, model: (model.input.value === customValue ? customModel.input.value : model.input.value).trim(), sendReasoningEffort: sendReasoning.input.checked, reasoningEffort: effort.input.value, skillIds: skillChoices.filter(item => item.input.checked).map(item => item.id), path: path.input.value.trim(), temperature: Number(temperature.input.value), maxTokens: Number(maxTokens.input.value), historyTurns: Number(historyTurns.input.value), sendTemperature: sendTemp.input.checked, tokenParameter: token.input.value };
     if (![input.temperature, input.maxTokens, input.historyTurns].every(Number.isFinite) || !Number.isInteger(input.maxTokens) || !Number.isInteger(input.historyTurns)) throw new Error('请填写有效的请求参数，token 和历史轮数必须为整数');
     const saved = tool ? await api.SaveTool(input) : await api.CreateTool(input);
     await refresh(); closeModal(); await selectTool(saved.id); toast(tool ? '工具设置已保存' : '工具已创建');
@@ -377,6 +416,51 @@ function openProviders(selectedId = '') {
   }, error);
 }
 
+function openSkillLibrary() {
+  const { body, footer } = modal('技能库', true);
+  body.append(skillNotice(), el('p', 'hint', 'Skill 统一保存在技能库。安装不会自动授权，请到各工具配置的「可使用的 Skill」中勾选。编辑共享 Skill 会影响所有已授权工具的后续请求。'));
+  body.append(el('p', 'hint', `本机技能库：${state.data.configDir}/skills`));
+  if (state.data.skillError) body.append(el('div', 'notice error', state.data.skillError));
+  const toolbar = el('div', 'skill-toolbar');
+  toolbar.append(button('新建 Skill', 'primary', () => openSkillEditor()), button('导入 Skill', '', async () => {
+    const preview = await api.ChooseSkillImport();
+    if (preview?.content) openSkillEditor(preview, true);
+  }));
+  body.append(toolbar);
+  const list = el('div', 'skill-list');
+  for (const skill of state.data.skills || []) {
+    const item = el('div', 'skill-item'), header = el('div', 'skill-item-header'), actions = el('div', 'skill-item-actions');
+    header.append(el('strong', '', skill.name));
+    if (!skill.loadError) actions.append(button('查看／编辑', '', async () => openSkillEditor(await api.GetSkill(skill.id))));
+    actions.append(button('删除', 'danger', () => confirmDialog('删除 Skill', `删除技能库中的「${skill.name}」。如仍有工具获授权，须先取消授权。外部导入源文件不会删除。`, '确认删除', async () => {
+      await api.DeleteSkill(skill.id); await refresh(); openSkillLibrary(); toast('Skill 已从技能库删除');
+    })));
+    header.append(actions); item.append(header, el('p', 'hint', skill.id));
+    const authorized = state.data.tools.filter(tool => tool.skillIds?.includes(skill.id));
+    item.append(el('p', 'hint', authorized.length ? `已授权工具：${authorized.map(tool => tool.name).join('、')}` : '尚未授权给任何工具'));
+    if (skill.loadError) item.append(el('div', 'form-error', skill.loadError));
+    list.append(item);
+  }
+  if (!(state.data.skills || []).length) list.append(el('p', 'hint', '技能库为空，可新建或导入一个文本 Skill。'));
+  body.append(list); footer.append(button('关闭', '', closeModal));
+}
+
+function openSkillEditor(skill = null, importing = false) {
+  const { body, footer } = modal(importing ? '导入 Skill · 预览确认' : skill?.id ? '编辑 Skill' : '新建 Skill', true);
+  body.classList.add('skill-preview'); body.append(skillNotice());
+  const template = `# 任务说明\n\n> ${skillWarning}\n\n## 任务\n说明需要模型完成的文本任务。\n\n## 步骤与输出要求\n请在此填写。\n`;
+  const name = field('Skill 名称', 'text', skill?.name || ''); name.input.maxLength = 80;
+  const content = field('Skill 正文', 'textarea', skill?.content ?? template, '仅支持 UTF-8 文本，正文上限 256 KiB。代码只作为文本，不会运行；不会读取附属文件。'); content.input.rows = 14;
+  body.append(name.wrapper, content.wrapper);
+  if (importing) body.append(el('p', 'hint', '确认后复制到本机技能库，不修改源文件，也不自动授予任何工具权限。'));
+  const error = el('div', 'form-error'); body.append(error);
+  footer.append(button('取消', '', openSkillLibrary));
+  formAction(footer, skill?.id ? '保存修改' : '保存到技能库', async () => {
+    await api.SaveSkill({id:skill?.id || '', name:name.input.value, content:content.input.value});
+    await refresh(); openSkillLibrary(); toast('Skill 已保存；在工具配置中勾选后使用');
+  }, error);
+}
+
 function openSessionMenu() {
   const toolId = state.toolId, session = state.session; if (!session) return;
   const { body, footer } = modal('管理会话'); const title = field('会话标题', 'text', session.title); title.input.maxLength = 120; body.append(title.wrapper);
@@ -392,9 +476,10 @@ function openHelp() {
     ['2. 创建你的工具', '工具的用途由 system 提示词决定。为每个工具选择供应商、模型和独立空目录；也可留空让程序生成目录。这里没有 agent、插件执行或额外工具调用。'],
     ['3. 问答与历史', 'Enter 发送，Shift + Enter 换行。「停止生成」取消当前请求并保存已有输出。历史轮数只计算成功的完整问答，0 表示每次独立问答。修改 system 和模型只影响后续请求；旧消息仍保留。'],
     ['4. 数据与迁移', '工具目录包含 toolbox.workspace.json 和 chats/*.json。退出程序后复制整个目录即可备份；供应商及密钥另外保存在配置目录。换机导入工作区后，需重新选择本机供应商。移除工具只取消登记，删除会话会删除对应文件。不要同时用多个程序实例写入同一目录。'],
-    ['5. 参数兼容', '不同模型的 token 和 temperature 限制不同。若收到参数错误，请在工具设置中关闭 temperature，或切换 max_completion_tokens。Gemini 和 Anthropic 会自动使用各自的系统指令与 token 字段。'],
+    ['5. 参数兼容', '思考强度可单独开启并选择低、中、高；关闭表示使用模型默认行为。模型需支持对应字段和档位；Anthropic 使用自适应思考，须关闭 temperature；Gemini 2.5 使用预算。不同模型的 token 和 temperature 限制不同。若收到参数错误，请在工具设置中关闭 temperature，或切换 max_completion_tokens。Gemini 和 Anthropic 会自动使用各自的系统指令与 token 字段。'],
     ['6. 文本与隐私', '只支持文本问答；不支持图片、附件、联网检索或 agent。Markdown 展示为安全的基础子集（标题、列表、粗体、行内代码、代码块、引用）；表格、链接等保留文本。无遥测或自动更新；请求内容会发往你配置的供应商。API Key 在本机配置文件中明文保存。'],
-    ['7. 版本与维护', '源码附有 README、docs/USER_GUIDE.md、docs/DEVELOPMENT.md、docs/ARCHITECTURE.md、CHANGELOG.md 和跨平台发布流程。当前数据格式为 schemaVersion 1。更新前请备份工作区和配置。']
+    ['7. 文本 Skill', `${skillWarning} 在左下角技能库新建或导入，再到工具设置勾选授权。后续请求会携带全部获授权正文，不进行自动选取。技能库单独位于配置目录的 skills 子目录，备份和换机时一并复制；撤销授权不会清除旧会话。`],
+    ['8. 版本与维护', '源码附有 README、docs/USER_GUIDE.md、docs/DEVELOPMENT.md、docs/ARCHITECTURE.md、CHANGELOG.md 和跨平台发布流程。当前数据格式为 schemaVersion 1。更新前请备份工作区和配置。']
   ];
   for (const [title, text] of sections) body.append(el('h3', '', title), el('p', '', text));
   body.append(el('h3', '', '本机配置目录'), el('code', '', state.data.configDir), el('p', 'hint', `ToolboxSelf v${state.data.version}`)); footer.append(button('知道了', 'primary', closeModal));
@@ -404,6 +489,7 @@ $('#new-tool').addEventListener('click', () => openToolModal());
 $('#import-tool').addEventListener('click', () => importTool().catch(showError));
 $('#new-chat').addEventListener('click', newChat);
 $('#providers-button').addEventListener('click', () => openProviders());
+$('#skills-button').addEventListener('click', openSkillLibrary);
 $('#help-button').addEventListener('click', openHelp);
 
 async function init() {

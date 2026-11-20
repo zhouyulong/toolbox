@@ -133,6 +133,35 @@ func (a *App) CancelRequest(id string) {
 	}
 }
 
+func (a *App) GetSkill(id string) (toolbox.Skill, error) {
+	if err := a.ready(); err != nil {
+		return toolbox.Skill{}, err
+	}
+	return a.service.GetSkill(id)
+}
+func (a *App) SaveSkill(input toolbox.Skill) (toolbox.Skill, error) {
+	if err := a.ready(); err != nil {
+		return toolbox.Skill{}, err
+	}
+	return a.service.SaveSkill(input)
+}
+func (a *App) DeleteSkill(id string) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	return a.service.DeleteSkill(id)
+}
+func (a *App) ChooseSkillImport() (toolbox.Skill, error) {
+	if err := a.ready(); err != nil {
+		return toolbox.Skill{}, err
+	}
+	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{Title: "导入纯文本 Skill（不支持脚本或外部操作）", Filters: []runtime.FileFilter{{DisplayName: "Markdown Skill", Pattern: "*.md"}}})
+	if err != nil || path == "" {
+		return toolbox.Skill{}, err
+	}
+	return a.service.PreviewSkillImport(path)
+}
+
 func (a *App) ChooseWorkspace() (string, error) {
 	return runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{Title: "选择工具的独立工作区目录", CanCreateDirectories: true})
 }
